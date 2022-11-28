@@ -51,33 +51,66 @@ static void print_path(t_list *path) {
     print_dist(path);
 }
 
-bool cmp_index(void *node1, void *node2) {
-   return ((t_path*)node1)->index > ((t_path*)node2)->index;
+static t_list *copy_list(t_list *list) {
+    t_list *temp = NULL;
+    while (list != NULL) {
+        mx_push_back(&temp, list->data);
+        list = list->next;
+    }
+    return temp;
 }
 
-static void print_shortest_paths_rec(t_list *path) {
+static void print_shortest_paths_rec(t_list *path, t_list **paths) {
     t_list *temp = ((t_path*)path->data)->previous;
     
-    mx_sort_list(temp, cmp_index);
     while(temp != NULL) {
         t_path *node = temp->data;
         mx_push_front(&path, node);
-        print_shortest_paths_rec(path);
+        print_shortest_paths_rec(path, paths);
         mx_pop_front(&path);   
         temp = temp->next;
     }
 
     if (((t_path*)path->data)->dist == 0) {
-        print_boundary();
-        print_path(path);
-        print_boundary();
+        mx_push_back(paths, copy_list(path));
     }
 }
 
+static bool cmp_paths(void *a, void *b) {
+    t_list *path_a = a;
+    t_list *path_b = b;
+
+    while (path_a != NULL) {
+        int index_a = ((t_path*)path_a->data)->index;
+        int index_b = ((t_path*)path_b->data)->index;
+        if (index_a != index_b) {
+            return index_a > index_b;
+        }
+        path_a = path_a->next;
+        path_b = path_b->next;
+    }
+    return false;
+}
+
+
 static void print_shortest_paths(t_path *nodes, int to) {
+    t_list *paths = NULL;
     t_list *path = mx_create_node(&nodes[to]);
-    print_shortest_paths_rec(path);
+
+    print_shortest_paths_rec(path, &paths);
+    mx_sort_list(paths, cmp_paths);
+
+    t_list *temp = paths;
+    while (temp != NULL) {
+        print_boundary();
+        print_path(temp->data);
+        print_boundary();
+        mx_clear_list((t_list**)&temp->data);
+        temp = temp->next;
+    }
+    
     mx_clear_list(&path);
+    mx_clear_list(&paths);
 }
 
 void print_routes(t_graph *graph) {
